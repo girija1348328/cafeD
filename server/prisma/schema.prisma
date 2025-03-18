@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Ensure you have this in your .env file
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  password  String
+  cart      Cart[]
+  orders    Order[]
+  reservations TableReservation[]
+  loyalty   LoyaltyReward?
+  payments  Payment[]
+  redeemedRewards RedeemedReward[]
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id   String  @id @default(uuid())
+  name String  @unique
+  items MenuItem[]
+}
+
+model MenuItem {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  imageUrl    String?
+  available   Boolean @default(true)
+  cart        Cart[]
+  orderItems  OrderItem[]
+  createdAt   DateTime @default(now())
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  menuItem  MenuItem @relation(fields: [menuItemId], references: [id])
+  menuItemId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id         String    @id @default(uuid())
+  user       User      @relation(fields: [userId], references: [id])
+  userId     String
+  totalPrice Float
+  status     OrderStatus @default(PENDING)
+  orderType  OrderType
+  items      OrderItem[]
+  delivery   DeliveryDetail?
+  payment    Payment?
+  createdAt  DateTime @default(now())
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+  menuItem  MenuItem @relation(fields: [menuItemId], references: [id])
+  menuItemId String
+  quantity  Int
+  price     Float
+}
+
+model DeliveryDetail {
+  id             String   @id @default(uuid())
+  order          Order    @relation(fields: [orderId], references: [id])
+  orderId        String   @unique
+  address        String
+  estimatedTime  DateTime?
+  deliveryStatus String   @default("pending")
+}
+
+model TableReservation {
+  id             String   @id @default(uuid())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  tableNumber    Int
+  reservationDate DateTime
+  status         ReservationStatus @default(PENDING)
+  createdAt      DateTime @default(now())
+}
+
+model LoyaltyReward {
+  id       String  @id @default(uuid())
+  user     User    @relation(fields: [userId], references: [id])
+  userId   String  @unique
+  points   Int     @default(0)
+  lastUpdated DateTime @default(now())
+}
+
+model RedeemedReward {
+  id         String @id @default(uuid())
+  user       User   @relation(fields: [userId], references: [id])
+  userId     String
+  pointsUsed Int
+  rewardDescription String
+  redeemedAt DateTime @default(now())
+}
+
+model Payment {
+  id           String @id @default(uuid())
+  user         User   @relation(fields: [userId], references: [id])
+  userId       String
+  order        Order  @relation(fields: [orderId], references: [id])
+  orderId      String @unique
+  paymentMethod PaymentMethod
+  amount       Float
+  status       PaymentStatus @default(PENDING)
+  createdAt    DateTime @default(now())
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderType {
+  PICKUP
+  DELIVERY
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  STRIPE
+  GOOGLE_PAY
+  APPLE_PAY
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
